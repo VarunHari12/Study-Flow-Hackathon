@@ -75,3 +75,73 @@ const generateHTML = (intent) => {
         <div class='_2'>Do ${intent}</div>
       </div>`;
 };
+
+var topic = null
+
+chrome.storage.sync.get(["currentTask"], function (result) {
+    if (chrome.runtime.lastError) {
+        console.error("Error retrieving data:", chrome.runtime.lastError);
+        return
+    } else if (result.currentTask) {
+        topic = result.currentTask.topic;
+        console.log("Topic:", topic);
+    } else {
+        console.log("No data found");
+        return
+    }
+
+
+    // Defines all the request data
+    if (topic != null) {
+      console.log(result);
+        
+        let url = window.location.toString();
+        
+        /* we can add aproved later
+        let approved = false;
+        chrome.storage.sync.get(["approved"], function(approvedresults) {
+        console.log(approvedresults.approved.includes(window.location.hostname.replace('www.', '')));
+        if (approvedresults.approved.includes(window.location.hostname.replace('www.', ''))) {
+        approved = true;
+        }
+        })
+        
+        if (!approved) {
+        return;
+        } 
+        */
+        
+        if (url == "https://www.google.com/" || url == "https://www.bing.com/" || url == "https://duckduckgo.com/") {
+            return;
+        }
+        
+        if (document.title.slice(-7) == "YouTube") {
+            url = "&q=Youtube video; Title: " + document.title.slice(0, -10);
+        }
+        
+        console.log(result.currentTask);
+        const payload = {
+            url: url,
+            intent: result.currentTask.topic,
+        };
+        
+        console.log("Checking if url", url, "is on task with intent", result.currentTask.topic);
+        
+        axios.request({
+            method: "post",
+            url: "https://antidis.tennisbowling.com/antidis",
+            headers: { "Content-Type": "application/json" },
+            data: JSON.stringify(payload)
+        }).then((response) => {
+            console.log("Page on task:", response.data.result);
+            if (!response.data.result) {
+                document.head.innerHTML = generateSTYLES(); // replaces current page with the blocking page
+                document.body.innerHTML = generateHTML(result.currentTask.topic);
+            }
+            
+        }).catch((error) => {
+            console.error("failed!!");
+        })
+        
+    }
+});
